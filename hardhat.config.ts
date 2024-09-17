@@ -2,8 +2,17 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.24",
-
+  solidity: {
+    compilers : [
+      {
+        version : "0.8.24"
+      },
+      {
+        version: "0.6.2"
+      }
+    ]
+    
+    },
   networks : {
     mumbai: {
       chainId: 80001,
