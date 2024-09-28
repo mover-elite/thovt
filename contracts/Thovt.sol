@@ -12,7 +12,7 @@ contract ThovtToken is ERC20Pausable, Ownable {
 
     address public treasuryAddress;
     address public operationsAddress;
-    
+    address public dividendOperatorAddress;
 
     mapping(address => bool) private _isExcludedFromTax;
 
@@ -20,6 +20,7 @@ contract ThovtToken is ERC20Pausable, Ownable {
     event TaxRatesUpdated(uint256 treasuryRate, uint256 dividendRate, uint256 operationsRate);
     event DistributeDivident(address indexed receiver, uint amount);
     event OperationsAddressUpdated (address operationsAddress);
+    event DividendOperatorAddressUpdates (address treasuryAddress);
     event TreasuryAddressUpdated (address treasuryAddress);
 
     constructor(
@@ -27,12 +28,14 @@ contract ThovtToken is ERC20Pausable, Ownable {
         string memory symbol,
         uint256 initialSupply,
         address _treasuryAddress,
-        address _operationsAddress
+        address _operationsAddress,
+        address _dividendOperatorAddress
     ) ERC20(name, symbol) Ownable(msg.sender) {
         _isExcludedFromTax[msg.sender] = true;
         _mint(msg.sender, initialSupply);
         treasuryAddress = _treasuryAddress;
         operationsAddress = _operationsAddress;
+        dividendOperatorAddress = _dividendOperatorAddress;
     }
 
 
@@ -46,20 +49,26 @@ contract ThovtToken is ERC20Pausable, Ownable {
 
     function transfer(address to, uint256 value) public override returns(bool) {
         address sender = msg.sender;
-        uint256 totalTax = _isExcludedFromTax[to] ? 0 :  treasuryTaxRate + dividendTaxRate + operationsTaxRate;
+        
+        if(_isExcludedFromTax[to]){
+            _transfer(sender, to, value);
+            return true;
+        }
+
+        uint256 totalTax = treasuryTaxRate + dividendTaxRate + operationsTaxRate;
         uint256 taxAmount = (value * totalTax) / 100;
         uint256 amountAfterTax = value - taxAmount;
-
         _transfer(sender, to, amountAfterTax);
         
         
-
+    
         if (taxAmount > 0) {
             uint256 treasuryAmount = (taxAmount * treasuryTaxRate) / totalTax;
-            // uint256 dividendAmount = (taxAmount * dividendTaxRate) / totalTax;
+            uint256 dividendAmount = (taxAmount * dividendTaxRate) / totalTax;
             uint256 operationsAmount = (taxAmount * operationsTaxRate) / totalTax;
             if (treasuryAmount > 0) _transfer(sender, treasuryAddress, treasuryAmount);
             if (operationsAmount > 0) _transfer(sender, operationsAddress, operationsAmount);
+            if (dividendAmount > 0) _transfer(sender, dividendOperatorAddress, dividendAmount);
         }
         return true;
 
@@ -86,8 +95,9 @@ contract ThovtToken is ERC20Pausable, Ownable {
         emit OperationsAddressUpdated(_newOperationsAddress);
     }    
 
-
-
-
+    function updateDividendOperatorAddress (address _newDividendOperatorAddress) external onlyOwner() {
+        dividendOperatorAddress = _newDividendOperatorAddress;
+        emit DividendOperatorAddressUpdates(_newDividendOperatorAddress);
+    }
 
 }
