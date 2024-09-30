@@ -7,20 +7,20 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 
 contract ThovtToken is ERC20Pausable, Ownable {
     uint256 public treasuryTaxRate = 3; // 3%
-    uint256 public dividendTaxRate = 1; // 1%
+    uint256 public proposalTreasuryTaxRate = 1; // 1%
     uint256 public operationsTaxRate = 1; // 1%
 
     address public treasuryAddress;
     address public operationsAddress;
-    address public dividendOperatorAddress;
+    address public proposalTreasuryAddress;
 
     mapping(address => bool) private _isExcludedFromTax;
 
 
-    event TaxRatesUpdated(uint256 treasuryRate, uint256 dividendRate, uint256 operationsRate);
+    event TaxRatesUpdated(uint256 treasuryRate, uint256 proposalTreasuryTaxRate, uint256 operationsRate);
     event DistributeDivident(address indexed receiver, uint amount);
     event OperationsAddressUpdated (address operationsAddress);
-    event DividendOperatorAddressUpdates (address treasuryAddress);
+    event ProposalTreasuryAddressUpdated(address treasuryAddress);
     event TreasuryAddressUpdated (address treasuryAddress);
 
     constructor(
@@ -29,21 +29,21 @@ contract ThovtToken is ERC20Pausable, Ownable {
         uint256 initialSupply,
         address _treasuryAddress,
         address _operationsAddress,
-        address _dividendOperatorAddress
+        address _proposalTreasuryAddress
     ) ERC20(name, symbol) Ownable(msg.sender) {
         _isExcludedFromTax[msg.sender] = true;
         _mint(msg.sender, initialSupply);
         treasuryAddress = _treasuryAddress;
         operationsAddress = _operationsAddress;
-        dividendOperatorAddress = _dividendOperatorAddress;
+        proposalTreasuryAddress = _proposalTreasuryAddress;
     }
 
 
-    function setTaxRates(uint256 _treasuryRate, uint256 _dividendRate, uint256 _operationsRate) external onlyOwner {
+    function setTaxRates(uint256 _treasuryRate, uint256 _proposalTreasuryTaxRate, uint256 _operationsRate) external onlyOwner {
         treasuryTaxRate = _treasuryRate;
-        dividendTaxRate = _dividendRate;
+        proposalTreasuryTaxRate = _proposalTreasuryTaxRate;
         operationsTaxRate = _operationsRate;
-        emit TaxRatesUpdated(_treasuryRate, _dividendRate, _operationsRate);
+        emit TaxRatesUpdated(_treasuryRate, _proposalTreasuryTaxRate, _operationsRate);
     }
 
 
@@ -55,7 +55,7 @@ contract ThovtToken is ERC20Pausable, Ownable {
             return true;
         }
 
-        uint256 totalTax = treasuryTaxRate + dividendTaxRate + operationsTaxRate;
+        uint256 totalTax = treasuryTaxRate + proposalTreasuryTaxRate + operationsTaxRate;
         uint256 taxAmount = (value * totalTax) / 100;
         uint256 amountAfterTax = value - taxAmount;
         _transfer(sender, to, amountAfterTax);
@@ -64,11 +64,11 @@ contract ThovtToken is ERC20Pausable, Ownable {
     
         if (taxAmount > 0) {
             uint256 treasuryAmount = (taxAmount * treasuryTaxRate) / totalTax;
-            uint256 dividendAmount = (taxAmount * dividendTaxRate) / totalTax;
+            uint256 dividendAmount = (taxAmount * proposalTreasuryTaxRate) / totalTax;
             uint256 operationsAmount = (taxAmount * operationsTaxRate) / totalTax;
             if (treasuryAmount > 0) _transfer(sender, treasuryAddress, treasuryAmount);
             if (operationsAmount > 0) _transfer(sender, operationsAddress, operationsAmount);
-            if (dividendAmount > 0) _transfer(sender, dividendOperatorAddress, dividendAmount);
+            if (dividendAmount > 0) _transfer(sender, proposalTreasuryAddress, dividendAmount);
         }
         return true;
 
@@ -95,9 +95,9 @@ contract ThovtToken is ERC20Pausable, Ownable {
         emit OperationsAddressUpdated(_newOperationsAddress);
     }    
 
-    function updateDividendOperatorAddress (address _newDividendOperatorAddress) external onlyOwner() {
-        dividendOperatorAddress = _newDividendOperatorAddress;
-        emit DividendOperatorAddressUpdates(_newDividendOperatorAddress);
+    function updateDividendOperatorAddress (address _newProposalTreasuryAddress) external onlyOwner() {
+        proposalTreasuryAddress = _newProposalTreasuryAddress;
+        emit ProposalTreasuryAddressUpdated(_newProposalTreasuryAddress);
     }
 
 }
